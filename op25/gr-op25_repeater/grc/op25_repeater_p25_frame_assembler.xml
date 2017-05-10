@@ -4,35 +4,95 @@
   <key>op25_repeater_p25_frame_assembler</key>
   <category>op25_repeater</category>
   <import>import op25_repeater</import>
-  <make>op25_repeater.p25_frame_assembler($udp_host, $port, $debug, $do_imbe, $do_output, $do_msgq, $queue)</make>
-  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
-       Sub-nodes:
-       * name
-       * key (makes the value accessible as $keyname, e.g. in the make node)
-       * type -->
-  <param>
-    <name>...</name>
-    <key>...</key>
-    <type>...</type>
-  </param>
+  <make>op25_repeater.p25_frame_assembler($host, $port, $debug, $do_imbe, $do_output, $do_msgq, gr.msg_queue(1), $do_audio_output, $do_phase2_tdma)</make>
 
-  <!-- Make one 'sink' node per input. Sub-nodes:
-       * name (an identifier for the GUI)
-       * type
-       * vlen
-       * optional (set to 1 for optional inputs) -->
+  <param>
+    <name>Host</name>
+    <key>host</key>
+    <type>string</type>
+  </param>
+  <param>
+    <name>Port</name>
+    <key>port</key>
+    <type>int</type>
+  </param>
+  <param>
+    <name>Debug Level</name>
+    <key>debug</key>
+    <type>int</type>
+  </param>
+  <param>
+    <name>IMBE</name>
+    <key>do_imbe</key>
+    <type>bool</type>
+    <option>
+      <name>Enabled</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>Disabled</name>
+      <key>False</key>
+    </option>
+  </param>
+  <param>
+    <name>Output</name>
+    <key>do_output</key>
+    <type>bool</type>
+    <option>
+      <name>Enabled</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>Disabled</name>
+      <key>False</key>
+    </option>
+  </param>
+  <param>
+    <name>Message Queue</name>
+    <key>do_msgq</key>
+    <type>bool</type>
+    <option>
+      <name>Enabled</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>Disabled</name>
+      <key>False</key>
+    </option>
+  </param>
+  <param>
+    <name>Audio Output</name>
+    <key>do_audio_output</key>
+    <type>bool</type>
+    <option>
+      <name>Enabled</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>Disabled</name>
+      <key>False</key>
+    </option>
+  </param>
+  <param>
+    <name>Phase 2 TDMA</name>
+    <key>do_phase2_tdma</key>
+    <type>bool</type>
+    <option>
+      <name>Enabled</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>Disabled</name>
+      <key>False</key>
+    </option>
+  </param>
   <sink>
     <name>in</name>
-    <type><!-- e.g. int, float, complex, byte, short, xxx_vector, ...--></type>
+    <type>byte</type>
   </sink>
 
-  <!-- Make one 'source' node per output. Sub-nodes:
-       * name (an identifier for the GUI)
-       * type
-       * vlen
-       * optional (set to 1 for optional inputs) -->
   <source>
     <name>out</name>
-    <type><!-- e.g. int, float, complex, byte, short, xxx_vector, ...--></type>
+    <type>short</type>
   </source>
 </block>

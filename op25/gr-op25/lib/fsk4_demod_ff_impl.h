@@ -35,7 +35,6 @@ namespace gr {
       const float d_block_rate;
       boost::scoped_array<float> d_history;
       size_t d_history_last;
-      gr::msg_queue::sptr d_queue;
       double d_symbol_clock;
       double d_symbol_spread;
       const float d_symbol_time;
@@ -53,7 +52,7 @@ namespace gr {
       bool tracking_loop_mmse(float input, float *output);
 
      public:
-      fsk4_demod_ff_impl(gr::msg_queue::sptr queue, float sample_rate_Hz, float symbol_rate_Hz);
+      fsk4_demod_ff_impl(float sample_rate_Hz, float symbol_rate_Hz);
       ~fsk4_demod_ff_impl();
 
       // Where all the action really happens

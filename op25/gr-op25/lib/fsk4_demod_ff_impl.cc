@@ -172,31 +172,31 @@ namespace gr {
   namespace op25 {
 
     fsk4_demod_ff::sptr
-    fsk4_demod_ff::make(gr::msg_queue::sptr queue, float sample_rate_Hz, float symbol_rate_Hz)
+    fsk4_demod_ff::make(float sample_rate_Hz, float symbol_rate_Hz)
     {
       return gnuradio::get_initial_sptr
-        (new fsk4_demod_ff_impl(queue, sample_rate_Hz, symbol_rate_Hz));
+        (new fsk4_demod_ff_impl(sample_rate_Hz, symbol_rate_Hz));
     }
 
     /*
      * The private constructor
      */
-    fsk4_demod_ff_impl::fsk4_demod_ff_impl(gr::msg_queue::sptr queue, float sample_rate_Hz, float symbol_rate_Hz)
+    fsk4_demod_ff_impl::fsk4_demod_ff_impl(float sample_rate_Hz, float symbol_rate_Hz)
       : gr::block("fsk4_demod_ff",
 		  gr::io_signature::make(1, 1, sizeof(float)),
 		  gr::io_signature::make(1, 1, sizeof(float))),
-	d_block_rate(sample_rate_Hz / symbol_rate_Hz),
-	d_history(new float[NTAPS]),
-	d_history_last(0),
-	d_queue(queue),
-	d_symbol_clock(0.0),
-	d_symbol_spread(2.0), // nominal symbol spread of 2.0 gives outputs at -3, -1, +1, +3
-	d_symbol_time(symbol_rate_Hz / sample_rate_Hz)
+      d_block_rate(sample_rate_Hz / symbol_rate_Hz),
+      d_history(new float[NTAPS]),
+      d_history_last(0),
+      d_symbol_clock(0.0),
+      d_symbol_spread(2.0), // nominal symbol spread of 2.0 gives outputs at -3, -1, +1, +3
+      d_symbol_time(symbol_rate_Hz / sample_rate_Hz)
     {
       fine_frequency_correction = 0.0;
       coarse_frequency_correction = 0.0;
 
       std::fill(&d_history[0], &d_history[NTAPS], 0.0);
+      set_history(NTAPS);
     }
 
     /*
@@ -226,9 +226,9 @@ namespace gr {
 
       // first we run through all provided data
       for(int i = 0; i < noutput_items; i++) {
-	if(tracking_loop_mmse(in[i], &out[n])) {
-	  ++n;
-	}
+        if(tracking_loop_mmse(in[i], &out[n])) {
+          ++n;
+	      }
       }
 
       // send frequency adjusment request if needed 
@@ -246,22 +246,22 @@ namespace gr {
       double arg1, arg2;
       
       // if the queue is full, don't block, drop the data...
-      if(d_queue->full_p())
-	return;
+      //if(d_queue->full_p())
+	      //return;
 
       const double COARSE_FREQUENCY_DEADBAND = 1.66;	// gnuradio frequency adjust messages will not be emitted until we exceed this threshold
 
       if((coarse_frequency_correction < COARSE_FREQUENCY_DEADBAND) && (coarse_frequency_correction > -COARSE_FREQUENCY_DEADBAND))
-	return;
+        return;
       
       arg1 = coarse_frequency_correction;
       arg2 = 0.0;
       coarse_frequency_correction = 0.0;
       
       // build & send a message
-      gr::message::sptr msg = gr::message::make(0, arg1, arg2, 0); // vlen() * sizeof(float));
-      d_queue->insert_tail(msg);
-      msg.reset();
+      //gr::message::sptr msg = gr::message::make(0, arg1, arg2, 0); // vlen() * sizeof(float));
+      //d_queue->insert_tail(msg);
+      //msg.reset();
     }
     
     bool
@@ -274,104 +274,103 @@ namespace gr {
       
       if(d_symbol_clock > 1.0) {
 	
-	d_symbol_clock -= 1.0;
+        d_symbol_clock -= 1.0;
 	
-	// at this point we state that linear interpolation was tried
-	// but found to be slightly inferior.  Using MMSE
-	// interpolation shouldn't be a terrible burden
-	
+      // at this point we state that linear interpolation was tried
+      // but found to be slightly inferior.  Using MMSE
+      // interpolation shouldn't be a terrible burden
+
 #if 0
-	int imu = min(static_cast<int>(floor(0.5 + (NSTEPS * (d_symbol_clock / d_symbol_time)))), NSTEPS - 1);
-	int imu_p1 = imu + 1;
+      int imu = min(static_cast<int>(floor(0.5 + (NSTEPS * (d_symbol_clock / d_symbol_time)))), NSTEPS - 1);
+      int imu_p1 = imu + 1;
 #else
-	int imu = (int) floor(0.5 + (NSTEPS * ((d_symbol_clock / d_symbol_time))));
-	int imu_p1 = imu + 1;
-	if (imu >= NSTEPS) { 
-	  imu = NSTEPS - 1;
-	  imu_p1 = NSTEPS;
-	}
+      int imu = (int) floor(0.5 + (NSTEPS * ((d_symbol_clock / d_symbol_time))));
+      int imu_p1 = imu + 1;
+      if (imu >= NSTEPS) {
+        imu = NSTEPS - 1;
+        imu_p1 = NSTEPS;
+      }
 #endif
-	
+
 #if 0
-	double interp = 0.0;
-	double interp_p1 = 0.0;
-	for(size_t i = 0, j = d_history_last; i < NTAPS; ++i) {
-	  interp += TAPS[imu][i] * d_history[j];
-	  interp_p1 += TAPS[imu_p1][i] * d_history[j];
-	  j = (j + 1) % NTAPS;
-	}
+      double interp = 0.0;
+      double interp_p1 = 0.0;
+      for(size_t i = 0, j = d_history_last; i < NTAPS; ++i) {
+        interp += TAPS[imu][i] * d_history[j];
+        interp_p1 += TAPS[imu_p1][i] * d_history[j];
+        j = (j + 1) % NTAPS;
+      }
 #else
-	size_t j = d_history_last;
-	double interp = 0.0;
-	double interp_p1 = 0.0;
-	for(int i=0; i<NTAPS; i++)
-	  {
-	    interp    +=  TAPS[imu   ][i] * d_history[j];
-	    interp_p1 +=  TAPS[imu_p1][i] * d_history[j];
-	    j = (j+1) % NTAPS;
-	  }
+      size_t j = d_history_last;
+      double interp = 0.0;
+      double interp_p1 = 0.0;
+      for(int i=0; i<NTAPS; i++) {
+        interp    +=  TAPS[imu   ][i] * d_history[j];
+        interp_p1 +=  TAPS[imu_p1][i] * d_history[j];
+        j = (j+1) % NTAPS;
+      }
 #endif
-	
-	// our output symbol will be interpolated value corrected for
-	// symbol_spread and frequency offset
-	interp -= fine_frequency_correction;
-	interp_p1 -= fine_frequency_correction;
-	
-	// output is corrected for symbol deviation (spread)
-	*output = 2.0 * interp / d_symbol_spread;
-	
-	// detect received symbol error: basically use a hard decision
-	// and subtract off expected position nominal symbol level
-	// which will be +/- 0.5 * symbol_spread and +/- 1.5 *
-	// symbol_spread remember: nominal symbol_spread will be 2.0
-	
-	double symbol_error;
-	const double K_SYMBOL_SPREAD = 0.0100; // tracking loop gain constant
-	if(interp < - d_symbol_spread) {
-	  // symbol is -3: Expected at -1.5 * symbol_spread
-	  symbol_error = interp + (1.5 * d_symbol_spread);
-	  d_symbol_spread -= (symbol_error * 0.5 * K_SYMBOL_SPREAD);
-	} else if(interp < 0.0) {
-	  // symbol is -1: Expected at -0.5 * symbol_spread
-	  symbol_error = interp + (0.5 * d_symbol_spread);
-	  d_symbol_spread -= (symbol_error * K_SYMBOL_SPREAD);
-	} else if(interp < d_symbol_spread) {
-	  // symbol is +1: Expected at +0.5 * symbol_spread
-	  symbol_error = interp - (0.5 * d_symbol_spread);
-	  d_symbol_spread += (symbol_error * K_SYMBOL_SPREAD);
-	} else {
-	  // symbol is +3: Expected at +1.5 * symbol_spread
-	  symbol_error = interp - (1.5 * d_symbol_spread);
-	  d_symbol_spread += (symbol_error * 0.5 * K_SYMBOL_SPREAD);
-	}
-	
-	// symbol clock tracking loop gain
-	const double K_SYMBOL_TIMING = 0.025;
-	if(interp_p1 < interp) {
-	  d_symbol_clock += symbol_error * K_SYMBOL_TIMING;  
-	} else {
-	  d_symbol_clock -= symbol_error * K_SYMBOL_TIMING;
-	}
-	
-	// constraints on symbol spreading
-	const double SYMBOL_SPREAD_MAX = 2.4; // upper range limit: +20%
-	const double SYMBOL_SPREAD_MIN = 1.6; // lower range limit: -20%
-	
-	// it seems reasonable to constrain symbol spread to +/- 20%
-	// of nominal 2.0
-	d_symbol_spread = std::max(d_symbol_spread, SYMBOL_SPREAD_MIN);
-	d_symbol_spread = std::min(d_symbol_spread, SYMBOL_SPREAD_MAX);
-	
-	// coarse tracking loop: for eventually frequency shift
-	// request generation
-	static const double K_COARSE_FREQUENCY = 0.00125;	// time constant for coarse tracking loop
-	coarse_frequency_correction += ((fine_frequency_correction - coarse_frequency_correction) * K_COARSE_FREQUENCY);
-	
-	// fine loop 
-	static const double K_FINE_FREQUENCY = 0.125;		// internal fast loop (must be this high to acquire symbol sync)
-	fine_frequency_correction += (symbol_error * K_FINE_FREQUENCY);
-	
-	return true;
+      
+      // our output symbol will be interpolated value corrected for
+      // symbol_spread and frequency offset
+      interp -= fine_frequency_correction;
+      interp_p1 -= fine_frequency_correction;
+      
+      // output is corrected for symbol deviation (spread)
+      *output = 2.0 * interp / d_symbol_spread;
+      
+      // detect received symbol error: basically use a hard decision
+      // and subtract off expected position nominal symbol level
+      // which will be +/- 0.5 * symbol_spread and +/- 1.5 *
+      // symbol_spread remember: nominal symbol_spread will be 2.0
+      
+      double symbol_error;
+      const double K_SYMBOL_SPREAD = 0.0100; // tracking loop gain constant
+      if(interp < - d_symbol_spread) {
+        // symbol is -3: Expected at -1.5 * symbol_spread
+        symbol_error = interp + (1.5 * d_symbol_spread);
+        d_symbol_spread -= (symbol_error * 0.5 * K_SYMBOL_SPREAD);
+      } else if(interp < 0.0) {
+        // symbol is -1: Expected at -0.5 * symbol_spread
+        symbol_error = interp + (0.5 * d_symbol_spread);
+        d_symbol_spread -= (symbol_error * K_SYMBOL_SPREAD);
+      } else if(interp < d_symbol_spread) {
+        // symbol is +1: Expected at +0.5 * symbol_spread
+        symbol_error = interp - (0.5 * d_symbol_spread);
+        d_symbol_spread += (symbol_error * K_SYMBOL_SPREAD);
+      } else {
+        // symbol is +3: Expected at +1.5 * symbol_spread
+        symbol_error = interp - (1.5 * d_symbol_spread);
+        d_symbol_spread += (symbol_error * 0.5 * K_SYMBOL_SPREAD);
+      }
+      
+      // symbol clock tracking loop gain
+      const double K_SYMBOL_TIMING = 0.025;
+      if(interp_p1 < interp) {
+        d_symbol_clock += symbol_error * K_SYMBOL_TIMING;  
+      } else {
+        d_symbol_clock -= symbol_error * K_SYMBOL_TIMING;
+      }
+      
+      // constraints on symbol spreading
+      const double SYMBOL_SPREAD_MAX = 2.4; // upper range limit: +20%
+      const double SYMBOL_SPREAD_MIN = 1.6; // lower range limit: -20%
+      
+      // it seems reasonable to constrain symbol spread to +/- 20%
+      // of nominal 2.0
+      d_symbol_spread = std::max(d_symbol_spread, SYMBOL_SPREAD_MIN);
+      d_symbol_spread = std::min(d_symbol_spread, SYMBOL_SPREAD_MAX);
+      
+      // coarse tracking loop: for eventually frequency shift
+      // request generation
+      static const double K_COARSE_FREQUENCY = 0.00125;	// time constant for coarse tracking loop
+      coarse_frequency_correction += ((fine_frequency_correction - coarse_frequency_correction) * K_COARSE_FREQUENCY);
+      
+      // fine loop 
+      static const double K_FINE_FREQUENCY = 0.125;		// internal fast loop (must be this high to acquire symbol sync)
+      fine_frequency_correction += (symbol_error * K_FINE_FREQUENCY);
+      
+      return true;
       }
       return false;
     }

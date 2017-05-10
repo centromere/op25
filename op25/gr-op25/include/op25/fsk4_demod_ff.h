@@ -24,7 +24,6 @@
 
 #include <op25/api.h>
 #include <gnuradio/block.h>
-#include <gnuradio/msg_queue.h>
 
 namespace gr {
   namespace op25 {
@@ -54,7 +53,7 @@ namespace gr {
        *
        * Nominal levels are -3, -1, +1, and +3.
        */
-      static sptr make(gr::msg_queue::sptr queue, float sample_rate_Hz, float symbol_rate_Hz);
+      static sptr make(float sample_rate_Hz, float symbol_rate_Hz);
     };
 
   } // namespace op25

@@ -4,7 +4,7 @@
   <key>op25_fsk4_demod_ff</key>
   <category>op25</category>
   <import>import op25</import>
-  <make>op25.fsk4_demod_ff(self.auto_tune_msgq, $sample_rate, $symbol_rate)</make>
+  <make>op25.fsk4_demod_ff($sample_rate, $symbol_rate)</make>
 
   <param>
     <name>Sample Rate</name>
@@ -18,22 +18,6 @@
     <key>symbol_rate</key>
     <value>4800</value>
     <type>real</type>
-  </param>
-
-  <param>
-    <name>Output Auto Tune</name>
-    <key>tune_out</key>
-    <value>True</value>
-    <type>bool</type>
-    <hide>part</hide>
-    <option>
-      <name>Yes</name>
-      <key>True</key>
-    </option>
-    <option>
-      <name>No</name>
-      <key>False</key>
-    </option>
   </param>
 
   <sink>
